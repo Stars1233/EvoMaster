@@ -11,7 +11,7 @@ Arguments:
   --config: Specify the config file path (optional, defaults to configs/{agent}/config.yaml)
   --task: Task description (optional, enters interactive input if not provided)
   --interactive: Interactive mode (optional)
-  --run-dir: Specify the run directory (optional, prompts for project name and creates runs/{project_name}_{timestamp}/ by default)
+  --run-dir: Specify the run directory (optional, defaults to runs/{agent}_{timestamp}/)
 """
 
 import argparse
@@ -49,8 +49,8 @@ Examples:
   # Specify a run directory
   python run.py --agent minimal --task "analyze data" --run-dir runs/my_experiment
 
-  # Specify a project name for the run directory
-  python run.py --agent minimal --task "analyze data" --run-name my_experiment
+  # Specify a run name under runs/
+  python run.py --agent minimal --task "analyze data" --run-dir my_experiment
 
   # Batch tasks (sequential)
   python run.py --agent minimal --task-file tasks.json
@@ -89,12 +89,11 @@ Examples:
 
     parser.add_argument(
         "--run-dir",
-        help="Specify run directory (default: prompts for project name and creates runs/{project_name}_{timestamp}/)"
-    )
-
-    parser.add_argument(
-        "--run-name",
-        help="Project name used in the run directory name when --run-dir is not specified"
+        help=(
+            "Run directory. Default: runs/{agent}_{timestamp}/. "
+            "A bare name such as 'math' becomes runs/math_{timestamp}/; "
+            "a path such as './math', 'runs/math', or '/tmp/math' is used exactly."
+        )
     )
 
     parser.add_argument(
@@ -132,14 +131,39 @@ def sanitize_run_name(name: str) -> str:
     return name
 
 
-def prompt_run_name() -> str:
-    """Force the user to provide a non-empty project name."""
-    while True:
-        raw = input("Please enter the project name: ").strip()
-        run_name = sanitize_run_name(raw)
-        if run_name:
-            return run_name
-        print("Project name cannot be empty. Please try again.")
+def is_bare_run_name(value: str) -> bool:
+    """Return whether --run-dir should be treated as a run name, not a path."""
+    path = Path(value)
+    return (
+        bool(value)
+        and not path.is_absolute()
+        and len(path.parts) == 1
+        and path.name == value
+        and value not in {".", ".."}
+    )
+
+
+def resolve_run_dir(agent_name: str, run_dir_arg: str | None) -> Path:
+    """Resolve the effective run directory from CLI arguments."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if run_dir_arg is None:
+        run_name = sanitize_run_name(agent_name)
+        if not run_name:
+            raise ValueError("Agent name cannot be converted into a valid run directory name")
+        return project_root / "runs" / f"{run_name}_{timestamp}"
+
+    run_dir_value = run_dir_arg.strip()
+    if not run_dir_value:
+        raise ValueError("--run-dir cannot be empty")
+
+    if is_bare_run_name(run_dir_value):
+        run_name = sanitize_run_name(run_dir_value)
+        if not run_name:
+            raise ValueError("--run-dir name cannot be converted into a valid run directory name")
+        return project_root / "runs" / f"{run_name}_{timestamp}"
+
+    return Path(run_dir_value)
 
 
 def get_task_description(args):
@@ -438,14 +462,11 @@ def main():
         sys.exit(1)
 
     # 2. Determine run directory
-    if args.run_dir:
-        run_dir = Path(args.run_dir)
-    else:
-        run_name = sanitize_run_name(args.run_name) if args.run_name else ""
-        if not run_name:
-            run_name = prompt_run_name()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        run_dir = project_root / "runs" / f"{run_name}_{timestamp}"
+    try:
+        run_dir = resolve_run_dir(args.agent, args.run_dir)
+    except ValueError as e:
+        logger.error(str(e))
+        sys.exit(1)
 
     # 3. Validate image files (if provided)
     images = None
@@ -540,10 +561,7 @@ def main():
         logger.info(f"  - Config: {run_dir}/config.yaml")
         logger.info(f"  - Logs: {run_dir}/logs/")
         logger.info(f"  - Trajectories: {run_dir}/trajectories/")
-        if len(tasks) > 1:
-            logger.info(f"  - Workspaces: {run_dir}/workspaces/")
-        else:
-            logger.info(f"  - Workspace: {run_dir}/workspace/")
+        logger.info(f"  - Workspaces: {run_dir}/workspaces/")
         logger.info("=" * 60)
 
         return 0 if failed_count == 0 else 1
