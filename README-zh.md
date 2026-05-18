@@ -8,7 +8,7 @@
 <p align="center">
   <a href="#quick-start"><img src="https://img.shields.io/badge/快速开始-3分钟上手-0ea5e9?style=for-the-badge" alt="快速开始"></a>
   <a href="#scimaster-series"><img src="https://img.shields.io/badge/SciMaster-6%2B智能体-059669?style=for-the-badge" alt="SciMaster"></a>
-  <a href="#key-features"><img src="https://img.shields.io/badge/核心特性-4项-7c3aed?style=for-the-badge" alt="核心特性"></a>
+  <a href="#key-features"><img src="https://img.shields.io/badge/核心特性-5项-7c3aed?style=for-the-badge" alt="核心特性"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-ea580c?style=for-the-badge" alt="License"></a>
   <a href="https://arxiv.org/abs/2604.17406"><img src="https://img.shields.io/badge/arXiv-2604.17406-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="#contact-us"><img src="https://img.shields.io/badge/微信-加入社群-07C160?style=for-the-badge&logo=wechat&logoColor=white" alt="WeChat Group"></a>
@@ -63,6 +63,8 @@ https://github.com/user-attachments/assets/a8fe00ba-531c-4d53-b7bd-1bbedf7a6442
 
 ## 📰 News
 
+**2026-05-18** EvoMaster 支持运行级自进化功能。智能体可以分析已完成的轨迹，生成 skills, tools和prompt overlays，记录详细 evolution 日志，并自动用进化后的 overlay 再次运行。详情请见[自进化使用指南](./docs/zh/evolution.md)。
+
 **2026-04-19** EvoMaster 预印本版本正式发布！欢迎查看我们的 [arXiv 论文](https://arxiv.org/abs/2604.17406)。
 
 **2026-04-12** EvoMaster `v0.1.1` 发布！MagiClaw现已移至[独立仓库](https://github.com/sjtu-sai-agents/MagiClaw)。EvoMaster 现已支持以skill形式被调用！添加示例自定义工具。
@@ -93,7 +95,11 @@ EvoMaster 的设计理念是便携与易用，通过即插即用的组件设计�
 
 通过 EvoMaster 实现的 [MagiClaw](https://github.com/sjtu-sai-agents/MagiClaw)，不仅能让使用者通过自然语言调度多个已有的智能体协作完成任务，还能继续基于 EvoMaster 框架创建新智能体，实现智能体的自我迭代与进化。
 
-### <a id="scimaster-series"></a>4. 🔬 SciMaster 生态系统
+### 4. 🔁 运行级自进化
+
+EvoMaster 可以可选地先运行智能体，再分析其轨迹和环境反馈，生成 run-local skills, tools和prompt overlays，随后自动用进化后的 overlay 再运行同一个智能体。工具改进会以可 review 的 proposal 形式保存。详情请见[自进化使用指南](./docs/zh/evolution.md)。
+
+### <a id="scimaster-series"></a>5. 🔬 SciMaster 生态系统
 
 我们基于 EvoMaster 统一实现并开源了多个 SciMaster 系列智能体。您可以快速部署 SciMaster 系列的成熟智能体，也可以轻松将其迁移至生物学、材料科学等其他科学领域。
 
@@ -241,6 +247,19 @@ python run.py --agent minimal --task task.txt
 ### 单智能体（Minimal）
 ```bash
 python run.py --agent minimal --config configs/minimal/deepseek-v3.2-example.yaml --task "Discover a pattern: Given sequence 1, 4, 9, 16, 25... find the formula"
+```
+
+### 自进化智能体（Minimal）
+先运行 baseline，再从轨迹中生成 run-local skills 和 prompt overlays，最后用进化后的 overlay 重新运行。详见[自进化使用指南](./docs/zh/evolution.md)。
+
+```bash
+python run.py \
+  --agent minimal \
+  --config configs/minimal/gpt-5-example.yaml \
+  --task "Discover a pattern: Given sequence 1, 4, 9, 16, 25... find the formula" \
+  --run-dir runs/evo_test \
+  --evolve \
+  --evolve-iterations 2
 ```
 
 ### 单智能体，输入任务包含图片（Minimal）

@@ -8,7 +8,7 @@
 <p align="center">
   <a href="#quick-start"><img src="https://img.shields.io/badge/Quick%20Start-3min%20Setup-0ea5e9?style=for-the-badge" alt="Quick Start"></a>
   <a href="#scimaster-series"><img src="https://img.shields.io/badge/SciMaster-6%2B%20Agents-059669?style=for-the-badge" alt="SciMaster"></a>
-  <a href="#key-features"><img src="https://img.shields.io/badge/Key%20Features-4%20Highlights-7c3aed?style=for-the-badge" alt="Key Features"></a>
+  <a href="#key-features"><img src="https://img.shields.io/badge/Key%20Features-5%20Highlights-7c3aed?style=for-the-badge" alt="Key Features"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-ea580c?style=for-the-badge" alt="License"></a>
   <a href="https://arxiv.org/abs/2604.17406"><img src="https://img.shields.io/badge/arXiv-2604.17406-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white" alt="arXiv"></a>
   <a href="#contact-us"><img src="https://img.shields.io/badge/WeChat-Join%20Group-07C160?style=for-the-badge&logo=wechat&logoColor=white" alt="WeChat Group"></a>
@@ -64,6 +64,8 @@ https://github.com/user-attachments/assets/a8fe00ba-531c-4d53-b7bd-1bbedf7a6442
 
 ## 📰 News
 
+**2026-05-18** EvoMaster now supports run-level self-evolution. Agents can analyze completed trajectories, generate run-local skills and prompt overlays, record detailed evolution logs, and automatically rerun with the evolved overlay. See the [Self-Evolution Guide](./docs/evolution.md).
+
 **2026-04-19** EvoMaster preprint version is released! Check out our [arXiv paper](https://arxiv.org/abs/2604.17406).
 
 **2026-04-12** EvoMaster `v0.1.1` is released! MagiClaw has now been moved to a [standalone repository](https://github.com/sjtu-sai-agents/MagiClaw). EvoMaster now supports being invoked as a skill and adds example custom tools.
@@ -94,7 +96,11 @@ EvoMaster is designed for portability and ease of use, with plug-and-play compon
 
 MagiClaw, built with EvoMaster, not only allows users to orchestrate multiple existing agents through natural language to collaborate on tasks, but can also create new agents based on the EvoMaster framework, enabling self-iteration and evolution of the agent ecosystem.
 
-### <a id="scimaster-series"></a>4. 🔬 The SciMaster Ecosystem
+### 4. 🔁 Run-Level Self-Evolution
+
+EvoMaster can optionally run agent(s), analyze its trajectory and feedback, generate run-local skills, tools and prompt overlays, then automatically rerun the same agent with the evolved overlay. Tool improvements are kept as reviewable proposals. See the [Self-Evolution Guide](./docs/evolution.md).
+
+### <a id="scimaster-series"></a>5. 🔬 The SciMaster Ecosystem
 
 We have unified the implementation and open-sourced multiple SciMaster series agents based on EvoMaster. You can quickly deploy battle-tested SciMaster agents, or easily adapt them to other scientific domains such as Biology, Material Science, and more.
 
@@ -243,6 +249,19 @@ For details on Playground examples, please refer to [here](./playground/README.m
 ### Single Agent (Minimal)
 ```bash
 python run.py --agent minimal --config configs/minimal/deepseek-v3.2-example.yaml --task "Discover a pattern: Given sequence 1, 4, 9, 16, 25... find the formula"
+```
+
+### Self-Evolving Agent (Minimal)
+Run a baseline, generate run-local skills and prompt overlays from the trajectory, then rerun with the evolved overlay. See the [Self-Evolution Guide](./docs/evolution.md) for details.
+
+```bash
+python run.py \
+  --agent minimal \
+  --config configs/minimal/gpt-5-example.yaml \
+  --task "Discover a pattern: Given sequence 1, 4, 9, 16, 25... find the formula" \
+  --run-dir runs/evo_test \
+  --evolve \
+  --evolve-iterations 2
 ```
 
 ### Single Agent with Image Input (Minimal)

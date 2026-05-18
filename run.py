@@ -108,6 +108,29 @@ Examples:
         help="List of image file paths (supports PNG/JPG), for multimodal task input"
     )
 
+    parser.add_argument(
+        "--evolve",
+        action="store_true",
+        help=(
+            "Run the optional self-evolution wrapper: baseline run, trajectory/log analysis, "
+            "agent-local skill and prompt overlay generation, then evolved rerun. "
+            "Currently supports one task and concurrency=1 only."
+        ),
+    )
+
+    parser.add_argument(
+        "--evolve-iterations",
+        type=int,
+        default=1,
+        help="Number of evolution iterations to run after the baseline (default: 1).",
+    )
+
+    parser.add_argument(
+        "--evolve-disable-llm-analyzer",
+        action="store_true",
+        help="Disable LLM-based trajectory analysis and use heuristic evolution only.",
+    )
+
     return parser.parse_args()
 
 
@@ -522,6 +545,34 @@ def main():
 
     # 6. Run tasks
     try:
+        if args.evolve:
+            if args.task_file:
+                logger.error("--evolve currently supports a single --task only, not --task-file")
+                return 1
+            if args.parallel:
+                logger.error("--evolve currently supports concurrency=1 only; do not pass --parallel")
+                return 1
+            if len(tasks) != 1:
+                logger.error("--evolve currently supports exactly one task")
+                return 1
+
+            from evomaster.evolution import EvolutionManager, EvolutionRunConfig
+
+            logger.info("🧬 EvoMaster evolution wrapper starting")
+            manager = EvolutionManager(
+                EvolutionRunConfig(
+                    agent_name=args.agent,
+                    config_path=config_path,
+                    task_description=tasks[0]["description"],
+                    run_dir=run_dir,
+                    project_root=project_root,
+                    iterations=max(args.evolve_iterations, 0),
+                    images=images,
+                    use_llm_analyzer=not args.evolve_disable_llm_analyzer,
+                )
+            )
+            return manager.run()
+
         if len(tasks) > 1 and args.parallel:
             # Parallel mode
             logger.info("🔄 Executing tasks in parallel...")

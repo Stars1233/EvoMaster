@@ -498,6 +498,22 @@ class BasePlayground:
         """
         return self.config_manager.get_agent_config(name)
 
+    def _get_effective_config_dir(self) -> Path:
+        """Return the directory used for resolving agent-local relative assets.
+
+        Evolution overlay configs live under run directories, but their
+        relative prompt, MCP, and custom-tool paths should still resolve
+        against the original ``configs/<agent>`` directory. The optional
+        ``evolution.base_config_dir`` field provides that stable base while
+        preserving normal behavior for non-evolution configs.
+        """
+        evolution_cfg = getattr(self.config, "evolution", {}) or {}
+        if isinstance(evolution_cfg, dict):
+            base_config_dir = evolution_cfg.get("base_config_dir")
+            if base_config_dir:
+                return Path(base_config_dir)
+        return self.config_dir
+
     def _setup_agent_llm(self, agent_name: str) -> dict:
         """Get the LLM configuration for a specific agent.
 
@@ -572,11 +588,23 @@ class BasePlayground:
         skills_config = getattr(self.config, "skills", None)
         if isinstance(skills_config, dict):
             skills_root = Path(skills_config.get("skills_root", "evomaster/skills"))
+            extra_roots = skills_config.get("extra_roots", [])
         else:
             skills_root = Path("evomaster/skills")
+            extra_roots = []
+        if isinstance(extra_roots, str):
+            extra_roots = [extra_roots]
+        if not isinstance(extra_roots, list):
+            extra_roots = []
         if self._base_skill_registry is None:
             self.logger.info(f"Loading full skill registry from: {skills_root}")
             self._base_skill_registry = SkillRegistry(skills_root)
+            for extra_root in extra_roots:
+                extra_path = Path(extra_root)
+                if not extra_path.is_absolute():
+                    extra_path = (self.config_dir / extra_path).resolve()
+                self.logger.info(f"Also loading extra skills from: {extra_path}")
+                self._base_skill_registry.load_from_directory(extra_path)
             # Also scan skills_ts directory (Openclaw skills)
             skills_ts_root = Path(skills_root).parent / "skills_ts"
             if skills_ts_root.exists():
@@ -1035,7 +1063,7 @@ class BasePlayground:
         # Infer the playground directory
         # config_dir is typically /path/to/configs/{playground_name}
         # playground_dir should be /path/to/playground/{playground_name}
-        playground_dir = Path(str(self.config_dir).replace("configs", "playground"))
+        playground_dir = Path(str(self._get_effective_config_dir()).replace("configs", "playground"))
         tools_dir = playground_dir / "tools"
 
         if not tools_dir.exists():
@@ -1281,7 +1309,7 @@ class BasePlayground:
         system_prompt_file = agent_config.get('system_prompt_file')
         user_prompt_file = agent_config.get('user_prompt_file')
 
-        playground_base = Path(str(self.config_dir).replace("configs", "playground"))
+        playground_base = Path(str(self._get_effective_config_dir()).replace("configs", "playground"))
         # Resolve system_prompt_file
         if system_prompt_file:
             prompt_path = Path(system_prompt_file)
@@ -1430,7 +1458,7 @@ class BasePlayground:
         # 1. Resolve the configuration file path
         config_path = Path(config_file)
         if not config_path.is_absolute():
-            config_path = self.config_manager.config_dir / config_path
+            config_path = self._get_effective_config_dir() / config_path
 
         if not config_path.exists():
             self.logger.error(f"MCP config file not found: {config_path}")
