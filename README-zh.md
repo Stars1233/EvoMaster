@@ -15,7 +15,7 @@
 </p>
 <div align="center">
 
-**面向规模化自主科研（Agentic Science at Scale）的通用演化智能体基座**
+**面向规模化自主科研（Agentic Science at Scale）的通用自动科研智能体基座**
 
 *让科学智能体开发更简单、模块化且功能强大，加速"AI for Science"的变革进程。*
 

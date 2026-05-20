@@ -15,7 +15,7 @@
 </p>
 <div align="center">
 
-**A Foundational Evolving Agent Framework for Agentic Science at Scale**
+**A Foundational Auto-Research Agent Framework for Agentic Science at Scale**
 
 *Accelerating the "AI for Science" revolution by making intelligent agent development accessible, modular, and powerful.*
 
