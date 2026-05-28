@@ -9,15 +9,15 @@ You can reason or use the following functions:
 
 For specific tools to interact with web content:
 5. web_search(keywords): this function takes string keywords as input, and the output is a dict containing top 10 web information from google search engine. An output example is the following python dict:
-{
-    "tool_result": {
-                "searchParameters": {...},
+{{
+    "tool_result": {{
+                "searchParameters": {{...}},
                 "organic": [
-                    {"title": Title, "link": Link, "snippet": Short description of the content, "position": Position},
+                    {{"title": Title, "link": Link, "snippet": Short description of the content, "position": Position}},
                     ...
                 ]
-            }
-}
+            }}
+}}
 6. web_parse(link:str, query:str): this function takes the link and query as input, and will parse the web page, call an LLM to answer the query based on the page content. The answer is put in the ['tool_result']['content'] field of the output dict. This function is useful when looking into detail information of a page.
 
 

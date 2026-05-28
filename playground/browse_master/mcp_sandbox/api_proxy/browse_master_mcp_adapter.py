@@ -17,6 +17,14 @@ HOST = os.getenv("HOST", "0.0.0.0")
 # Your FastAPI service address
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:1234")
 
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return default
+
+REQUEST_TIMEOUT = _env_float("BROWSE_MASTER_TIMEOUT", 300.0)
+
 # Read API key from config file or environment variable
 def _load_serper_api_key():
     """Read Serper API key from environment variable or config file"""
@@ -33,6 +41,16 @@ def _load_serper_api_key():
 
 SERPER_API_KEY = _load_serper_api_key()
 
+def _load_default_web_parse_model():
+    config_path = os.path.join(os.path.dirname(__file__), "../configs/web_agent.json")
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            return config.get("USE_MODEL") or config.get("BASE_MODEL") or ""
+    return ""
+
+DEFAULT_WEB_PARSE_MODEL = _load_default_web_parse_model()
+
 # initialize MCP server
 mcp = FastMCP(
     "browse-master-search-tools",
@@ -40,14 +58,14 @@ mcp = FastMCP(
     port=MCP_PORT,
 )
 
-async def make_async_request(session, url, payload, timeout=30):
+async def make_async_request(session, url, payload, timeout=REQUEST_TIMEOUT):
     """async HTTP request"""
     async with session.post(url, json=payload, timeout=timeout) as response:
         response.raise_for_status()
         return await response.json()
 
 @mcp.tool()
-async def web_search(query: str, top_k: int = 10) -> str:
+async def web_search(query: str, top_k: int = 10):
     """
     Search web by Google
     
@@ -78,15 +96,14 @@ async def web_search(query: str, top_k: int = 10) -> str:
     except Exception as e:
         return f"Search error: {str(e)}"
 
-@mcp.tool()
-async def web_parse(link: str, user_prompt: str, llm: str = "gpt-4o") -> str:
+async def web_parse(link: str, user_prompt: str, llm: str):
     """
     Parse and analyze web page content
     
     Args:
         link: URL
         user_prompt: Specific query or analysis request about web page content
-        llm: llm model, default is gpt-4o
+        llm: Required model name to use for parsing.
     """
     try:
         payload = {
@@ -100,7 +117,7 @@ async def web_parse(link: str, user_prompt: str, llm: str = "gpt-4o") -> str:
                 session,
                 f"{API_BASE_URL}/web_parse",
                 payload,
-                timeout=60
+                timeout=REQUEST_TIMEOUT
             )
         
         return json.dumps(result, ensure_ascii=False, indent=2)
@@ -112,8 +129,18 @@ async def web_parse(link: str, user_prompt: str, llm: str = "gpt-4o") -> str:
     except Exception as e:
         return f"Error parsing web page content: {str(e)}"
 
+web_parse.__doc__ = f"""
+Parse and analyze web page content.
+
+Args:
+    link: URL.
+    user_prompt: Specific query or analysis request about web page content.
+    llm: Required model name. Use "{DEFAULT_WEB_PARSE_MODEL}" unless intentionally overriding configs/web_agent.json.
+"""
+mcp.tool()(web_parse)
+
 @mcp.tool()
-async def batch_search_and_filter(keyword: str) -> str:
+async def batch_search_and_filter(keyword: str):
     """
     Batch search and filter results
     
@@ -130,7 +157,7 @@ async def batch_search_and_filter(keyword: str) -> str:
                 session,
                 f"{API_BASE_URL}/batch_search_and_filter",
                 payload,
-                timeout=120
+                timeout=REQUEST_TIMEOUT
             )
         
         return json.dumps(result, ensure_ascii=False, indent=2)
@@ -143,7 +170,7 @@ async def batch_search_and_filter(keyword: str) -> str:
         return f"Search error: {str(e)}"
 
 @mcp.tool()
-async def generate_keywords(seed_keyword: str) -> str:
+async def generate_keywords(seed_keyword: str):
     """
     Generate multiple search keywords
     
@@ -172,7 +199,7 @@ async def generate_keywords(seed_keyword: str) -> str:
         return f"Error generating keywords: {str(e)}"
 
 @mcp.tool()
-async def check_condition(content: str, condition: str) -> str:
+async def check_condition(content: str, condition: str):
     """
     Evaluate whether content meets specified conditions
     
@@ -203,7 +230,7 @@ async def check_condition(content: str, condition: str) -> str:
         return f"Error checking conditions: {str(e)}"
 
 @mcp.tool()
-async def pdf_read(url: str) -> str:
+async def pdf_read(url: str):
     """
     Read PDF from web
     
@@ -218,7 +245,7 @@ async def pdf_read(url: str) -> str:
                 session,
                 f"{API_BASE_URL}/read_pdf",
                 payload,
-                timeout=60
+                timeout=REQUEST_TIMEOUT
             )
         
         return json.dumps(result, ensure_ascii=False, indent=2)

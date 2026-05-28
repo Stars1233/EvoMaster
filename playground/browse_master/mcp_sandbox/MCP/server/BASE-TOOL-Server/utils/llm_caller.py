@@ -9,11 +9,15 @@ with open(os.path.join(current_dir, '..', '..', '..', '..','configs', 'llm_call.
 
 async def llm_call(query: str, model_name: str = "qwen-72b", max_retries: int = 3):
     retry_count = 0
+    model_config = config[model_name]
+    max_retries = int(model_config.get("retry_time", max_retries))
+    request_timeout = float(os.getenv("BROWSE_MASTER_LLM_REQUEST_TIMEOUT", "120"))
     while retry_count < max_retries:
         try:
             client = openai.AsyncOpenAI(
-                api_key=config[model_name]["authorization"],
-                base_url=config[model_name]["url"]
+                api_key=model_config["authorization"],
+                base_url=model_config["url"],
+                timeout=request_timeout
             )
             response = await client.chat.completions.create(
                 model=model_name,

@@ -80,6 +80,7 @@ class MCPToolManager:
         # If set for a server, tools not in the list are excluded
         # Example: {"server1": ["tool-a", "tool-b"]} -> only load tool-a and tool-b from server1
         self.tool_include_only: dict[str, list[str]] = {}
+        self.tool_timeout: float | int | None = None
 
     def _build_tools(self, server_name: str, connection: Any, tools_info: list[dict]) -> None:
         """Build MCPTool instances for a server.
@@ -107,6 +108,7 @@ class MCPToolManager:
                 tool_description=tool_info.get("description", ""),
                 input_schema=tool_info.get("input_schema", {}),
                 remote_tool_name=original_name,
+                call_timeout=self.tool_timeout,
             )
             mcp_tool._mcp_server = server_name
             mcp_tool._mcp_loop = self.loop  # Preserve original loop injection logic
@@ -290,6 +292,8 @@ class MCPToolManager:
                 tool_name=prefixed_name,
                 tool_description=tool_info.get("description", ""),
                 input_schema=tool_info.get("input_schema", {}),
+                remote_tool_name=original_name,
+                call_timeout=self.tool_timeout,
             )
             mcp_tool._mcp_server = server_name
 

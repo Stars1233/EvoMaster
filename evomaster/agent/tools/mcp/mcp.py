@@ -9,6 +9,7 @@ import asyncio
 import concurrent.futures
 import json
 import logging
+import os
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..base import BaseTool, ToolError
@@ -50,6 +51,7 @@ class MCPTool(BaseTool):
         tool_description: str,
         input_schema: dict,
         remote_tool_name: str | None = None,
+        call_timeout: float | int | None = None,
     ):
         """Initialize the MCP tool.
 
@@ -67,6 +69,7 @@ class MCPTool(BaseTool):
         self._tool_description = tool_description
         self._input_schema = input_schema
         self._remote_tool_name = remote_tool_name
+        self._call_timeout = self._resolve_call_timeout(call_timeout)
         # Dedicated MCP event loop (injected by MCPToolManager or Playground)
         self._mcp_loop = None
 
@@ -172,12 +175,22 @@ class MCPTool(BaseTool):
 
             # 3) If the loop is running (e.g. run_forever in a background thread), use thread-safe submission
             fut = asyncio.run_coroutine_threadsafe(coro, loop)
-            return fut.result(timeout=60)
+            return fut.result(timeout=self._call_timeout)
 
         except concurrent.futures.TimeoutError:
-            raise ToolError("MCP tool call timed out after 60 seconds")
+            raise ToolError(f"MCP tool call timed out after {self._call_timeout:g} seconds")
         except Exception as e:
             raise ToolError(f"Failed to call MCP tool: {str(e)}")
+
+    @staticmethod
+    def _resolve_call_timeout(call_timeout: float | int | None) -> float:
+        """Resolve MCP call timeout from config/env, preserving the old 60s default."""
+        value = call_timeout
+        try:
+            timeout = float(value)
+        except (TypeError, ValueError):
+            timeout = 60.0
+        return max(timeout, 1.0)
 
     def _format_mcp_result(self, result: Any) -> str:
         """Format the MCP tool return result.
