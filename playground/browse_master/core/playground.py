@@ -76,6 +76,21 @@ class BrowseMasterPlayground(BasePlayground):
             exp.set_run_dir(self.run_dir)
         return exp
 
+    def _configure_mcp_manager(self, manager, mcp_config) -> None:
+        """Apply Browse-Master specific MCP settings."""
+        if isinstance(mcp_config, dict):
+            tool_timeout = mcp_config.get("tool_timeout")
+        else:
+            tool_timeout = getattr(mcp_config, "tool_timeout", None)
+
+        if tool_timeout is None:
+            return
+
+        try:
+            manager.tool_timeout = float(tool_timeout)
+        except (TypeError, ValueError):
+            self.logger.warning("Invalid mcp.tool_timeout value: %r", tool_timeout)
+
     def run(self, task_description: str, output_file: str | None = None) -> dict:
         """Run workflow (overrides base class method)
 

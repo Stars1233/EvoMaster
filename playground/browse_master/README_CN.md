@@ -77,12 +77,59 @@ agents:
 # MCP Configuration
 # ============================================
 mcp:
-  # MCP configuration file path (relative to config_dir or absolute path)
-  config_file: "mcp_config.json"
-
-  # Whether to enable MCP (optional, default true)
-  enabled: true
+  # MCP 工具调用等待上限（秒）。web_parse/read_pdf 等长耗时工具超时时优先调这里。
+  tool_timeout: 300
 ```
+
+超时配置建议：
+
+- `mcp.tool_timeout`：Agent 等待 MCP 工具返回的时间上限；如果日志中出现 `MCP tool call timed out after ... seconds`，调大这里。
+- `session.local.timeout`：仅控制 `execute_bash` 等本地 shell 命令超时；不影响 MCP 工具。
+- MCP 搜索服务内部 HTTP/LLM 超时默认使用 300 秒；如需临时调整，启动服务时设置 `BROWSE_MASTER_TIMEOUT=600 ./start_all.sh restart`。
+
+MCP 搜索服务的模型配置在 `playground/browse_master/mcp_sandbox/configs/` 下，和上面的 Agent 模型配置相互独立：
+
+- `web_agent.json`：配置 `web_parse` 使用的模型。`USE_MODEL` 是默认模型，`BASE_MODEL` 是失败后的备用模型。
+- `paper_agent.json`：配置 PDF/paper 解析使用的模型，字段含义同上。
+- `llm_call.json`：配置每个模型名对应的 OpenAI-compatible 接口地址和密钥；模型名可以自定义，不限于文件里已有示例，但必须和 `USE_MODEL` / `BASE_MODEL` 完全一致。
+
+示例：
+
+```json
+// web_agent.json
+{
+  "serper_api_key": "your-serper-api-key",
+  "search_region": "us",
+  "search_lang": "en",
+  "USE_MODEL": "my-model",
+  "BASE_MODEL": "my-model",
+  "user_prompt": {
+    "search_conclusion": "..."
+  }
+}
+```
+
+```json
+// paper_agent.json
+{
+  "USE_MODEL": "my-model",
+  "BASE_MODEL": "my-model",
+  "paperQA_prompt": "..."
+}
+```
+
+```json
+// llm_call.json
+{
+  "my-model": {
+    "url": "https://your-openai-compatible-endpoint/v1",
+    "authorization": "your-api-key",
+    "retry_time": 3
+  }
+}
+```
+
+修改 `mcp_sandbox/configs/` 下的配置后，需要重启 MCP 服务才会生效。
 
 ### 2. 部署 MCP 服务
 

@@ -8,7 +8,7 @@ llm:
     api_key: "${OPENAI_API_KEY}"
     base_url: "${GPT_BASE_URL}"
     temperature: 0.7
-    max_tokens: 4096
+    max_tokens: 40000
     timeout: 60
     max_retries: 3
     retry_delay: 1.0
@@ -51,7 +51,7 @@ agents:
         builtin: []
 
     context:
-      max_tokens: 4096
+      max_tokens: 40000
       truncation_strategy: "latest_half"
       preserve_system_messages: true
       preserve_recent_turns: 5
@@ -62,13 +62,13 @@ agents:
 
   executor:
     llm: "openai"
-    max_turns: 50
+    max_turns: 100
     tools:
         builtin: ["*"]     
         mcp: "mcp_config.json"
 
     context:
-      max_tokens: 4096
+      max_tokens: 40000
       truncation_strategy: "latest_half"
       preserve_system_messages: true
       preserve_recent_turns: 5
@@ -76,6 +76,14 @@ agents:
     # Prompt configuration (relative to playground/browse_master/)
     system_prompt_file: "prompts/executor_prefix.txt"
     user_prompt_file: "prompts/executor_user.txt"
+
+# ============================================
+# MCP Configuration
+# ============================================
+mcp:
+  # Default wait time for each MCP tool call. This is separate from
+  # session.local.timeout, which only applies to local shell commands.
+  tool_timeout: 300
 
 # ============================================
 # Session Configuration
@@ -174,4 +182,3 @@ logging:
   file: null
   console: true
   
-
